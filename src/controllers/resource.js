@@ -1,4 +1,4 @@
-const getPerson =  async function (req, res, next) {
+const getResource =  async function (req, res, next) {
   try {
     res.send('hello, user!')
   } catch (e) {
@@ -7,5 +7,5 @@ const getPerson =  async function (req, res, next) {
 };
 
 module.exports = {
-  getPerson
+  getResource
 };

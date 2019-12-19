@@ -1,64 +1,67 @@
-// const User = require('../models/user')
+const User = require('../models/user')
 // const bcrypt = require('bcryptjs');
+const { get } = require('lodash')
 
 const jwt = require('jsonwebtoken'); //token 认证
 const config = require('../config');
+const JWT_SIGNING_COOKIE_NAME = 'authorization'
+
+const validateToken = async function (req, res, next) {
+  const token = jwt.sign(userInfo, config.secret, {
+    expiresIn: config.JWT_EXPIRY
+  });
+  res.cookie(JWT_SIGNING_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    expires: new Date(Date.now() + ms(JWT_EXPIRY)),
+  })
+};
 
 const login = async function (req, res, next) {
-  const payload = {
-    user_id: 1,
-    user_name: 'zzz',
-    user_role: 1
-  };
-  //生成token
-  const token = jwt.sign(payload, config.secret, {
-    expiresIn: 3600
-  });
-  res.send({ success: true, token, user: payload })
+  const username = get(req, 'body.username')
+  const password = get(req, 'body.password')
+  const userInfo = await User.findOne({ user_name: username })
+  if (userInfo) {
+    const verify = bcrypt.compareSync(password, userInfo.user_password);
+    if (verify) {
+      //生成token
+      const token = jwt.sign(userInfo, config.secret, {
+        expiresIn: config.JWT_EXPIRY
+      });
+      res.send({ success: true, token, user: userInfo })
+    } else {
+      res.status(403).send({ success: false, message: '密码错误！' })
+    }
+  } else {
+    res.status(403).send({ success: false, message: '该用户不存在！' })
+  }
+};
 
-  // const {
-  //   email,
-  //   password
-  // } = ctx.request.body;
-  // const findResult = await User.find({
-  //   email
-  // });
-  // const user = findResult[0];
-  // if (findResult.length === 0) {
-  //   //表示不存在该用户
-  //   ctx.status = 404;
-  //   ctx.body = {
-  //     message: '该用户不存在'
-  //   };
-  //   return;
-  // }
-  // //验证密码是否正确
-  // const verify = bcrypt.compareSync(password, user.password);
-  // if (verify) {
-  //   //密码正确
-  //   const payload = {
-  //     name: user.name,
-  //     email,
-  //     avatar: user.avatar
-  //   };
-  //   //生成token
-  //   const token = jwt.sign(payload, config.secretKey, {
-  //     expiresIn: 3600
-  //   });
+const register = async function (req, res, next) {
+  const username = get(req, 'body.username')
+  const password = get(req, 'body.password')
+  const userInfo = await User.findOne({ user_name: username })
+  if (userInfo) {
+    res.status(403).send({ success: false, message: '该用户已存在！' })
+  } else {
+    
+    res.send({ success: true, token, user: userInfo })
+  }
+};
 
-  //   ctx.status = 200;
-  //   ctx.body = {
-  //     message: '验证成功',
-  //     token: 'Bearer ' + token
-  //   }
-  // } else {
-  //   ctx.status = 500;
-  //   ctx.body = {
-  //     message: '密码错误'
-  //   };
-  // }
+const logout = async function (req, res, next) {
+  const bearerHearder = req.cookies.authorization
+  if (bearerHearder) {
+    res.clearCookie(JWT_SIGNING_COOKIE_NAME)
+    res.send('logout success')
+  } else {
+    res.status(403).send({ success: false, message: '退出失败！' })
+  }
 };
 
 module.exports = {
-  login
+  validateToken,
+  login,
+  register,
+  logout
 };

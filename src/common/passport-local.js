@@ -9,12 +9,10 @@ opts.secretOrKey = config.secret;
 
 module.exports = passport => {
   passport.use(new JwtStrategy(opts, async function (jwt_payload, done) {
-    console.log('jwt_payload', jwt_payload)
     const userInfo = await User.findOne({
       user_id: jwt_payload.user_id
     })
-    console.log(userInfo)
-    if (userInfo) {
+    if (userInfo && userInfo.user_role > 0) {
       done(null, userInfo);
     } else {
       done(null, false);

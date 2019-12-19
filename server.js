@@ -21,9 +21,10 @@ app.use(session({
   resave: true,
   saveUninitialized: true
 }));
-app.use(passport.initialize());
+app.use(passport.initialize()); // 使 passport 持久化，不只是session
 app.use(passport.session());
 app.use((req, res, next) => {
+  req.passport = passport // 为了在中间件中可以调用到 passport
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   if (req.method == 'OPTIONS') {
@@ -52,7 +53,7 @@ require('./src/common/passport-local')(passport);
 
 // Route Section
 require('./src/routes/authRouter')(app);
-require('./src/routes/person')(app, passport);
-require('./src/routes/resource')(app, passport);
+require('./src/routes/person')(app);
+require('./src/routes/resource')(app);
 
 app.listen(port, () => console.log(`Server running on PORT: ${port}`));
