@@ -37,6 +37,7 @@ app.use((req, res, next) => {
 const mongoHost  = `mongodb://${config.host}:${config.port || 27017}/${config.database}`
 mongoose.Promise = global.Promise
 mongoose.connect(mongoHost, {
+  useCreateIndex: true,
   useNewUrlParser: true,
   useUnifiedTopology: true,
   useFindAndModify: false,
