@@ -9,6 +9,7 @@ const config = require('../config')
 
 const GenerateToken = user => {
   return jwt.sign({
+    user_id: get(user, 'user_id'),
     user_uuid: get(user, 'user_uuid'),
     user_name: get(user, 'user_name'),
     user_role: get(user, 'user_role')
@@ -26,6 +27,8 @@ const ReturnUserInfo = user => {
     user_id: get(user, 'user_id'),
     user_uuid: get(user, 'user_uuid'),
     user_name: get(user, 'user_name'),
+    user_created: get(user, 'user_created'),
+    user_updated: get(user, 'user_updated'),
     user_role: get(user, 'user_role')
   }
 }
@@ -40,32 +43,58 @@ const login = async function (req, res, next) {
       if (verify) {
         // 生成token
         const token = GenerateToken(userInfo)
+        res.cookie('authorization', token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          expires: new Date(Date.now() + config.JWT_EXPIRY)
+        })
         // 存储token到redis
-        res.send({ success: true, token, user: ReturnUserInfo(userInfo) })
+        return res.send({ success: true, code: 1, token: 'Bearer ' + token, user: ReturnUserInfo(userInfo) })
       } else {
-        res.status(403).send({ success: false, message: '密码错误！' })
+        return res.send({ success: true, code: 0, message: '密码错误！' })
       }
     } else {
-      res.status(403).send({ success: false, message: '该用户不存在！' })
+      return res.send({ success: true, code: 0, message: '该用户不存在！' })
     }
   } catch (error) {
-    res.status(403).send({ success: false, message: '登录失败！error:' + error })
+    return res.send({ success: true, code: 0, message: '登录失败！error:' + error })
   }
 }
 
 const validateToken = async function (req, res, next) {
-  res.send({ success: true, user: ReturnUserInfo(req.userInfo) })
+  const token = GenerateToken(req.userInfo)
+  res.cookie('authorization', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    expires: new Date(Date.now() + config.JWT_EXPIRY)
+  })
+  return res.send({ success: true, code: 1, user: ReturnUserInfo(req.userInfo) })
+}
+
+const getUser =  async function (req, res, next) {
+  if (get(req, 'userInfo.user_role') > 2) {
+    try {
+      const reqParams = req.query
+      let total = 0
+      const allUser = await User.find({})
+      return res.send({ success: true, code: 1, user_list: allUser || [] })
+    } catch (error) {
+      return res.send({ success: true, code: 0, message: '获取用户列表失败！error:' + error })
+    }
+  } else {
+    return res.send({ success: true, code: 0, message: '权限不足，禁止访问！' })
+  }
 }
 
 const register = async function (req, res, next) {
   if (get(req, 'userInfo.user_role') === 3) {
     try {
       const username = get(req, 'body.user_name')
-      const password = get(req, 'body.user_password')
+      const password = get(req, 'body.user_password') || '123456'
       const userRole = get(req, 'body.user_role')
       const checkUsername = await User.findOne({ user_name: username })
       if (checkUsername) {
-        res.status(403).send({ success: false, message: '该用户已存在！' })
+        return res.send({ success: true, code: 0, message: '该用户已存在！' })
       } else {
         let userid = 0
         const rows = await User.find({}).sort({'user_id':-1}).limit(1)
@@ -81,46 +110,65 @@ const register = async function (req, res, next) {
           user_role: userRole
         })
         newUserInfo.save().then(result => {
-          res.send({ success: true, user: ReturnUserInfo(result) })
+          return res.send({ success: true, code: 1, user: ReturnUserInfo(result) })
         }).catch(error => {
           console.log("Error:" + error)
-          res.status(403).send({ success: false, message: '注册失败！error:' + error })
+          return res.send({ success: true, code: 0, message: '注册失败！error:' + error })
         })
       }
     } catch (error) {
-      res.status(403).send({ success: false, message: '注册失败！error:' + error })
+      return res.send({ success: true, code: 0, message: '注册失败！error:' + error })
     }
   } else {
-    res.status(403).send({ success: false, message: '权限不足，禁止注册！' })
+    return res.send({ success: true, code: 0, message: '权限不足，禁止注册！' })
   }
 }
 
 const changeUserInfo = async function (req, res, next) {
-  try {
-    const isResetPsw = get(req, 'body.is_reset_password')
-    const useruuid = get(req, 'body.user_uuid')
-    const username = get(req, 'body.user_name')
-    const password = get(req, 'body.user_password')
-    const newPassword = isResetPsw ? '123456' : get(req, 'body.new_user_password')
-    const userInfo = await User.findOne({ user_uuid: useruuid })
-    if (userInfo) {
-      if (!isResetPsw) {
-        const verify = md5(password) === get(userInfo, 'user_password')
-        if (!verify) res.status(403).send({ success: false, message: '原密码错误！' })
+  const useruuid = get(req, 'body.user_uuid')
+  const tokenUserRole = get(req, 'userInfo.user_role')
+  if (tokenUserRole === 3 || useruuid === get(req, 'userInfo.user_uuid')) {
+    try {
+      const isResetPsw = get(req, 'body.is_reset_password')
+      const isChangePsw = get(req, 'body.is_change_password')
+      const isChangeUsername = get(req, 'body.is_change_username')
+      const username = get(req, 'body.user_name')
+      const userRole = tokenUserRole === 3 ? get(req, 'body.user_role') : tokenUserRole
+      const userInfo = await User.findOne({ user_uuid: useruuid })
+      if (userInfo) {
+        const params = {
+          user_name: username,
+          user_role: userRole
+        }
+        if (isChangeUsername) { // 重置用户名
+          const checkNewUsername = await User.findOne({ user_name: username })
+          if (checkNewUsername) return res.send({ success: true, code: 0, message: '用户名已存在' })
+          params.user_name = username
+        }
+
+        if (isResetPsw) { // 重置密码
+          params.user_password = md5('123456')
+        }
+
+        if (isChangePsw) { // 通过原密码修改密码
+          const password = get(req, 'body.user_password')
+          const verify = md5(password) === get(userInfo, 'user_password')
+          if (!verify) return res.send({ success: true, code: 0, message: '原密码错误！' })
+          const newPassword = get(req, 'body.new_user_password')
+          params.user_password = md5(newPassword)
+        }
+        
+        await User.update({ user_uuid: useruuid }, params)
+        const newUserInfo = await User.findOne({ user_uuid: useruuid })
+        return res.send({ success: true, code: 1, user: ReturnUserInfo(newUserInfo) })
+      } else {
+        return res.send({ success: true, code: 0, message: '该用户不存在！' })
       }
-      const userRole = get(req, 'body.user_role') || get(userInfo, 'user_role')
-      await User.update({ user_uuid: useruuid }, {
-        user_name: username || get(userInfo, 'user_name'),
-        user_password: md5(newPassword),
-        user_role: userRole
-      })
-      const newUserInfo = await User.findOne({ user_uuid: useruuid })
-      res.send({ success: true, user: ReturnUserInfo(newUserInfo) })
-    } else {
-      res.status(403).send({ success: false, message: '该用户不存在！' })
+    } catch (error) {
+      return res.send({ success: true, code: 0, message: '修改失败！error:' + error })
     }
-  } catch (error) {
-    res.status(403).send({ success: false, message: '修改失败！error:' + error })
+  } else {
+    return res.send({ success: true, code: 0, message: '权限不足，禁止修改！' })
   }
 }
 
@@ -133,27 +181,28 @@ const deleteUser = async function (req, res, next) {
         const newUserInfo = await User.remove({
           user_uuid: useruuid
         })
-        res.send({ success: true, user: ReturnUserInfo(newUserInfo) })
+        return res.send({ success: true, code: 1, user: ReturnUserInfo(newUserInfo) })
       } else {
-        res.status(403).send({ success: false, message: '该用户不存在！' })
+        return res.send({ success: true, code: 0, message: '该用户不存在！' })
       }
     } catch (error) {
-      res.status(403).send({ success: false, message: '删除失败！error:' + error })
+      return res.send({ success: true, code: 0, message: '删除失败！error:' + error })
     }
   } else {
-    res.status(403).send({ success: false, message: '权限不足，禁止删除！' })
+    return res.send({ success: true, code: 0, message: '权限不足，禁止删除！' })
   }
 }
 
 const logout = async function (req, res, next) {
   // 清除redis中的token
   res.clearCookie('authorization')
-  res.send({ success: true, message: '退出成功！' })
+  return res.send({ success: true, code: 1, message: '退出成功！' })
 }
 
 module.exports = {
   login,
   validateToken,
+  getUser,
   register,
   changeUserInfo,
   deleteUser,

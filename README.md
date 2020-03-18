@@ -95,19 +95,20 @@ RMS-BE
 	|----node_modules
 	|----src
 		|----common # 公共js (配置文件/二次封装)
-			|----index.js
+			|----passport-local.js # passport local 策略
 		|----config # 数据库配置模块
 			|----index.js
 		|----controllers # MVC中的C，用户数据与视图的衔接处理
 			|----auth.js # 登录、退出等权限控制
-			|----person.js
+			|----people.js
 		|----middleware # 中间件
 			|----auth.js # token鉴权中间件
 		|----models # 处理响应的数据，是数据模型
 			|----user.js
+			|----people.js
 		|----routes # 路由模块
 			|----authRouter.js # 登录等权限控制路由
-			|----person.js
+			|----people.js
 	|----server.js # 入口文件
 	|----package.json
 ```

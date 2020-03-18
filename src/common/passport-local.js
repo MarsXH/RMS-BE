@@ -3,6 +3,7 @@ const ExtractJwt = require('passport-jwt').ExtractJwt
 const User = require('../models/user')
 
 const config = require('../config')
+
 const opts = {
   // Prepare the extractor from the header.
   jwtFromRequest: ExtractJwt.fromExtractors([
@@ -22,16 +23,6 @@ const opts = {
   // Pass the request object back to the callback so we can attach the JWT to it.
   passReqToCallback: true
 }
-// JwtStrategy.JwtVerifier = (token, secretOrKey, options, callback) => {
-//   return jwt.verify(token, options, (err, jwt) => {
-//     if (err) {
-//       return callback(err)
-//     }
-
-//     // Attach the original token onto the payload.
-//     return callback(false, { token, jwt })
-//   })
-// }
 
 module.exports = passport => {
   passport.use(new JwtStrategy(opts, async function (req, jwt_payload, done) {

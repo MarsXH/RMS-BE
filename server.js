@@ -28,7 +28,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   if (req.method == 'OPTIONS') {
-    res.send(200);
+    return res.send(200);
   } else {
     next();
   }
@@ -54,7 +54,7 @@ require('./src/common/passport-local')(passport);
 
 // Route Section
 require('./src/routes/authRouter')(app);
-require('./src/routes/person')(app);
+require('./src/routes/people')(app);
 require('./src/routes/resource')(app);
 
 app.listen(port, () => console.log(`Server running on PORT: ${port}`));
