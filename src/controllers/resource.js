@@ -4,9 +4,11 @@ const { get } = require('lodash')
 const getResource =  async function (req, res, next) {
   if (get(req, 'userInfo.user_role') !== 0) {
     try {
-      const { page = 1, size = 10, keyword = '' } = req.body
-      const allResource = await Resource.find({})
-      return res.send({ success: true, code: 1, resource_list: allResource || [] })
+      const { page = 1, size = 10, string = '' } = get(req, 'query')
+      const limit = parseInt(size)
+      const allResource = await Resource.find({ 'resource_name': { '$regex': string } }).skip((page - 1) * size).limit(limit).sort({'_id': -1})
+      const total = await Resource.find({ 'resource_name': { '$regex': string } }).count()
+      return res.send({ success: true, code: 1, resource_list: allResource || [], total })
     } catch (error) {
       return res.send({ success: true, code: 0, message: '获取资源列表失败！error:' + error })
     }

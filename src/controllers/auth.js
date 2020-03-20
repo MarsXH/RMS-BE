@@ -74,10 +74,11 @@ const validateToken = async function (req, res, next) {
 const getUser =  async function (req, res, next) {
   if (get(req, 'userInfo.user_role') > 2) {
     try {
-      const reqParams = req.query
-      let total = 0
-      const allUser = await User.find({})
-      return res.send({ success: true, code: 1, user_list: allUser || [] })
+      const { page = 1, size = 10, string = '' } = get(req, 'query')
+      const limit = parseInt(size)
+      const allUser = await User.find({ 'user_name': { '$regex': string } }).skip((page - 1) * size).limit(limit).sort({'_id': -1})
+      const total = await User.find({ 'user_name': { '$regex': string } }).count()
+      return res.send({ success: true, code: 1, user_list: allUser || [], total })
     } catch (error) {
       return res.send({ success: true, code: 0, message: '获取用户列表失败！error:' + error })
     }

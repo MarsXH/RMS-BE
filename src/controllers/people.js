@@ -4,8 +4,11 @@ const { get } = require('lodash')
 const getPeople =  async function (req, res, next) {
   if (get(req, 'userInfo.user_role') !== 0) {
     try {
-      const allPeople = await People.find({})
-      return res.send({ success: true, code: 1, people_list: allPeople || [] })
+      const { page = 1, size = 10, string = '' } = get(req, 'query')
+      const limit = parseInt(size)
+      const allPeople = await People.find({ 'people_name': { '$regex': string } }).skip((page - 1) * size).limit(limit).sort({'_id': -1})
+      const total = await People.find({ 'people_name': { '$regex': string } }).count()
+      return res.send({ success: true, code: 1, people_list: allPeople || [], total })
     } catch (error) {
       return res.send({ success: true, code: 0, message: '获取人员列表失败！error:' + error })
     }
