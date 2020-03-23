@@ -7,6 +7,6 @@ module.exports = function (app) {
   app.get('/getUser', authMiddleware, authController.getUser)
   app.post('/register', authMiddleware, authController.register)
   app.post('/changeUserInfo', authMiddleware, authController.changeUserInfo)
-  app.post('/deleteUser', authMiddleware, authController.deleteUser)
+  app.delete('/deleteUser', authMiddleware, authController.deleteUser)
   app.post('/logout', authMiddleware, authController.logout)
 }
