@@ -6,8 +6,8 @@ const getResource =  async function (req, res, next) {
     try {
       const { page = 1, size = 10, string = '' } = get(req, 'query')
       const limit = parseInt(size)
-      const allResource = await Resource.find({ 'resource_name': { '$regex': string } }).skip((page - 1) * size).limit(limit).sort({'_id': -1})
-      const total = await Resource.find({ 'resource_name': { '$regex': string } }).count()
+      const allResource = await Resource.find({ 'resource_name': { '$regex': string } }).skip((page - 1) * size).limit(limit).sort({'_id': 1})
+      const total = await Resource.find({ 'resource_name': { '$regex': string } }).countDocuments()
       return res.send({ success: true, code: 1, resource_list: allResource || [], total })
     } catch (error) {
       return res.send({ success: true, code: 0, message: '获取资源列表失败！error:' + error })
@@ -21,7 +21,7 @@ const addResource =  async function (req, res, next) {
   if (get(req, 'userInfo.user_role') > 1) {
     try {
       let newResourceInfo = req.body
-      const rows = await Resource.find().sort({'resource_id':-1}).limit(1)
+      const rows = await Resource.find().sort({'resource_id': -1}).limit(1)
       if (rows && rows.length) {
         newResourceInfo.resource_id = rows[0].resource_id + 1
       } else {
@@ -42,7 +42,7 @@ const updateResource =  async function (req, res, next) {
     try {
       const resourceUuid = get(req, 'body.resource_uuid')
       const resourceInfo = get(req, 'body.resource_info')
-      const newResourceInfo = await Resource.update({ resource_uuid: resourceUuid }, resourceInfo)
+      const newResourceInfo = await Resource.updateOne({ resource_uuid: resourceUuid }, resourceInfo)
       return res.send({ success: true, code: 1, resource: newResourceInfo })
     } catch (error) {
       return res.send({ success: true, code: 0, message: '更新资源失败！error:' + error })
@@ -58,7 +58,7 @@ const deleteResource =  async function (req, res, next) {
       const resourceUuid = get(req, 'query.resource_uuid')
       const checkResource = await Resource.findOne({ resource_uuid: resourceUuid })
       if (checkResource) {
-        const newResourceInfo = await Resource.remove({
+        const newResourceInfo = await Resource.deleteOne({
           resource_uuid: resourceUuid
         })
         return res.send({ success: true, code: 1, resource: newResourceInfo })

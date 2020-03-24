@@ -6,8 +6,8 @@ const getPeople =  async function (req, res, next) {
     try {
       const { page = 1, size = 10, string = '' } = get(req, 'query')
       const limit = parseInt(size)
-      const allPeople = await People.find({ 'people_name': { '$regex': string } }).skip((page - 1) * size).limit(limit).sort({'_id': -1})
-      const total = await People.find({ 'people_name': { '$regex': string } }).count()
+      const allPeople = await People.find({ 'people_name': { '$regex': string } }).skip((page - 1) * size).limit(limit).sort({'_id': 1})
+      const total = await People.find({ 'people_name': { '$regex': string } }).countDocuments()
       return res.send({ success: true, code: 1, people_list: allPeople || [], total })
     } catch (error) {
       return res.send({ success: true, code: 0, message: '获取人员列表失败！error:' + error })
@@ -21,7 +21,7 @@ const addPeople =  async function (req, res, next) {
   if (get(req, 'userInfo.user_role') > 1) {
     try {
       let newPeopleInfo = req.body
-      const rows = await People.find().sort({'people_id':-1}).limit(1)
+      const rows = await People.find().sort({'people_id': -1}).limit(1)
       if (rows && rows.length) {
         newPeopleInfo.people_id = rows[0].people_id + 1
       } else {
@@ -42,7 +42,7 @@ const updatePeople =  async function (req, res, next) {
     try {
       const peopleUuid = get(req, 'body.people_uuid')
       const peopleInfo = get(req, 'body.people_info')
-      const newPeopleInfo = await People.update({ people_uuid: peopleUuid }, peopleInfo)
+      const newPeopleInfo = await People.updateOne({ people_uuid: peopleUuid }, peopleInfo)
       return res.send({ success: true, code: 1, people: newPeopleInfo })
     } catch (error) {
       return res.send({ success: true, code: 0, message: '更新人员失败！error:' + error })
@@ -58,7 +58,7 @@ const deletePeople =  async function (req, res, next) {
       const peopleUuid = get(req, 'query.people_uuid')
       const checkPeople = await People.findOne({ people_uuid: peopleUuid })
       if (checkPeople) {
-        const newPeopleInfo = await People.remove({
+        const newPeopleInfo = await People.deleteOne({
           people_uuid: peopleUuid
         })
         return res.send({ success: true, code: 1, people: newPeopleInfo })

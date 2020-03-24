@@ -76,8 +76,8 @@ const getUser =  async function (req, res, next) {
     try {
       const { page = 1, size = 10, string = '' } = get(req, 'query')
       const limit = parseInt(size)
-      const allUser = await User.find({ 'user_name': { '$regex': string } }).skip((page - 1) * size).limit(limit).sort({'_id': -1})
-      const total = await User.find({ 'user_name': { '$regex': string } }).count()
+      const allUser = await User.find({ 'user_name': { '$regex': string } }).skip((page - 1) * size).limit(limit).sort({'_id': 1})
+      const total = await User.find({ 'user_name': { '$regex': string } }).countDocuments()
       return res.send({ success: true, code: 1, user_list: allUser || [], total })
     } catch (error) {
       return res.send({ success: true, code: 0, message: '获取用户列表失败！error:' + error })
@@ -98,7 +98,7 @@ const register = async function (req, res, next) {
         return res.send({ success: true, code: 0, message: '该用户已存在！' })
       } else {
         let userid = 0
-        const rows = await User.find({}).sort({'user_id':-1}).limit(1)
+        const rows = await User.find({}).sort({'user_id': -1}).limit(1)
         if (rows && rows.length) {
           userid = rows[0].user_id + 1
         } else {
@@ -134,7 +134,7 @@ const changeUserInfo = async function (req, res, next) {
       const isChangePsw = get(req, 'body.is_change_password')
       const isChangeUsername = get(req, 'body.is_change_username')
       const username = get(req, 'body.user_name')
-      const userRole = tokenUserRole === 3 ? get(req, 'body.user_role') : tokenUserRole
+      const userRole = useruuid === get(req, 'userInfo.user_uuid') ? tokenUserRole : get(req, 'body.user_role')
       const userInfo = await User.findOne({ user_uuid: useruuid })
       if (userInfo) {
         const params = {
@@ -159,7 +159,7 @@ const changeUserInfo = async function (req, res, next) {
           params.user_password = md5(newPassword)
         }
         
-        await User.update({ user_uuid: useruuid }, params)
+        await User.updateOne({ user_uuid: useruuid }, params)
         const newUserInfo = await User.findOne({ user_uuid: useruuid })
         return res.send({ success: true, code: 1, user: ReturnUserInfo(newUserInfo) })
       } else {
@@ -176,10 +176,10 @@ const changeUserInfo = async function (req, res, next) {
 const deleteUser = async function (req, res, next) {
   if (get(req, 'userInfo.user_role') === 3) {
     try {
-      const useruuid = get(req, 'body.user_uuid')
+      const useruuid = get(req, 'query.user_uuid')
       const checkUser = await User.findOne({ user_uuid: useruuid })
       if (checkUser) {
-        const newUserInfo = await User.remove({
+        const newUserInfo = await User.deleteOne({
           user_uuid: useruuid
         })
         return res.send({ success: true, code: 1, user: ReturnUserInfo(newUserInfo) })
