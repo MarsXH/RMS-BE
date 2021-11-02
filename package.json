@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "cross-env DB_HOST=139.196.124.164 node server.js",
+    "start": "cross-env DB_HOST=106.14.243.121 node server.js",
     "build": "webpack -p --progress --colors"
   },
   "dependencies": {
