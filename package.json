@@ -8,13 +8,13 @@
     "build": "webpack -p --progress --colors"
   },
   "dependencies": {
-    "body-parser": "^1.19.0",
+    "body-parser": "^1.20.1",
     "cookie-parser": "~1.4.4",
     "cross-env": "^5.2.0",
     "debug": "~2.6.9",
     "ejs": "~2.6.1",
     "eslint": "^6.7.2",
-    "express": "^4.16.4",
+    "express": "^4.18.2",
     "express-session": "^1.17.0",
     "jsonwebtoken": "^8.5.1",
     "lodash": "^4.17.15",
